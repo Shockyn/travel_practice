@@ -8,6 +8,7 @@ import pandas as pd
 import math as m
 import numpy as np
 import pprint
+import time
 from collections import Counter
 
 from travelDB import travelDB
@@ -15,6 +16,10 @@ from travelDB import travelDB
 class similarDB(object):
     def __init__(self, travelDB, user_id, city, days):
         self.travel_db = travelDB()
+        self.user_id = user_id
+        self.city = city
+        self.days = days
+
 
         self.geoinfo_df = self.travel_db.get_geoinfo_db_fetch(city)
         self.geoinfo_df.columns = ['place_id', 'name', 'lng', 'lat']
@@ -29,28 +34,25 @@ class similarDB(object):
         self.ratings_df = self.travel_db.get_ratings_db_fetch(city)
         self.ratings_df.columns = ['place_id', 'reviews']
 
-        self.days = days
         self.node_df = pd.DataFrame(columns=['place_id', 'node', 'distance'])
         self.node_geo_df = 0
         self.node_list = list()
 
     def get_user_pref(self):
+        start_time = time.time()
         print('Calculating user preference...')
-        user_place = self.user_df.place_id.tolist()
-        user_type = list()
-
-        for place in user_place:
-            user_type.extend(self.travel_db.get_types(place))
+        user_type = self.travel_db.get_user_type(self.user_id)
 
         user_prefer = pd.DataFrame(dict(Counter(user_type)).items(), columns=['type', 'weight'])
 
-        print('Calculating user preference has done!')
+        print('Calculating user preference has been done! %s sec' % (time.time() - start_time))
 
         return pd.DataFrame(np.hstack((np.array(user_prefer.type).reshape(len(user_prefer.type), 1),
                                        np.array(user_prefer.weight/max(user_prefer.weight)).reshape(len(user_prefer.weight), 1))),
                             columns=['type', 'weight']).sort_values(by='weight', ascending=False)
 
     def get_place_score(self):
+        start_time = time.time()
         user_pref_df = self.get_user_pref().set_index('type')
         place_scores = dict()
 
@@ -67,11 +69,10 @@ class similarDB(object):
 #           place_scores[self.geoinfo_df.ix[place, 'name']] = place_score
             place_scores[place] = place_score
 
-        print('Calculating place scores has done!')
-
         place_score_df = pd.merge(pd.DataFrame(place_scores.items(), columns=['place_id', 'weight']),
                                   self.ratings_df, on='place_id', how='outer').sort_values(['weight', 'reviews'], ascending=[False, False])
 
+        print('Calculating place scores has been done! %s sec' % (time.time() - start_time))
         return place_score_df
 
     def deg2rad(self, deg):
@@ -112,6 +113,7 @@ class similarDB(object):
         return dist
 
     def making_node(self):
+        start_time = time.time()
         user_pref_df = self.get_place_score().set_index('place_id')
 
         self.node_df.place_id = user_pref_df.index
@@ -145,12 +147,16 @@ class similarDB(object):
 
         self.node_list = self.node_geo_df['node'].tolist()
 
-        print('Making node has done!')
+        print('Making node has been done! %s sec' % (time.time() - start_time))
 
 #       return self.node_df.copy()
 #       return self.node_df.ix[:, ['name', 'place_id', 'node', 'distance']].sort_values(['node', 'distance'], ascending=[True, True])
+        return self.node_geo_df
 
     def making_schedule(self):
+        start_time = time.time()
+        print('Making Schedule...')
+
         self.making_node()
         total_schedule = dict()
         result_df = pd.DataFrame(columns=list(self.node_df.columns).extend('day'))
@@ -166,7 +172,7 @@ class similarDB(object):
                 temp_df = temp_df.append(self.node_df[self.node_df['node'] == node])
                 total_distance += temp_df[temp_df['node'] == node]['distance'].sum()
 
-                if len(temp_df) > 12: continue
+                if len(temp_df) > 8: continue
                 if total_distance < 10000:
                     next_node, distance = self.find_near_node(node)
                     result_list.append(next_node)
@@ -177,10 +183,15 @@ class similarDB(object):
             total_schedule.update(temp_df.groupby('day')['name'].apply(list).to_dict())
             result_df = result_df.append(temp_df)
 
-        pprint.pprint(total_schedule, width=1)
+#       pprint.pprint(total_schedule, width=1)
 
-        result_df = result_df[['day', 'node', 'name', 'place_id', 'lat', 'lng']]
+#       result_df = result_df[['day', 'node', 'name', 'place_id', 'lat', 'lng']]
 
+#       writer = pd.ExcelWriter('{}_{}.xlsx'.format(self.city, self.user_id))
+#       result_df.to_excel(writer)
+#       writer.save()
+
+        print('Making Schedule has been done! %s sec' % (time.time() - start_time))
         return total_schedule
 
     def find_near_node(self, node):
@@ -207,9 +218,9 @@ class similarDB(object):
         return tuple((min(lng) + (max(lng) - min(lng)) / 2, min(lat) + (max(lat) - min(lat)) / 2))
 
 city = 'moscow'
-user_id = 1
+user_id = 3
 days = 3
 travel_db = travelDB()
 
 similar_db = similarDB(travelDB, user_id, city, days)
-similar_db.making_schedule()
+pprint.pprint(similar_db.making_schedule(), width=1)

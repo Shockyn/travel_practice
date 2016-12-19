@@ -101,6 +101,19 @@ class travelDB(object):
         finally:
             session.close()
 
+    def get_user_type(self, user_id):
+        result = connection.execute("SELECT user_id, travel.types.place_id, types FROM travel.types " + \
+                                    "INNER JOIN travel.users " + \
+                                    "ON travel.types.place_id = travel.users.place_id " + \
+                                    "WHERE travel.users.user_id = '{}'".format(user_id))
+
+        df = pd.DataFrame(result.fetchall())
+        df.columns = result.keys()
+
+        result_list = df.types.tolist()
+
+        return result_list
+
     def get_users(self, user_id, place_id=''):
         try:
             session = Session()
@@ -167,26 +180,27 @@ class travelDB(object):
         df.columns = result.keys()
 
         return df
+
 '''
-city = 'moscow'
+city = ['moscow', 'florence']
 file_path = 'data/{}.xlsx'
 
 travel_db = travelDB()
 
-size = len(pd.read_excel(file_path.format(city)))
+size = len(pd.read_excel(file_path.format(city[1])))
 user_size = len(pd.read_excel(file_path.format('users')))
 
-places_df = pd.read_excel(file_path.format(city)).ix[:, ['name', 'id', 'address', 'lng', 'lat']]
+places_df = pd.read_excel(file_path.format(city[1])).ix[:, ['name', 'id', 'address', 'lng', 'lat']]
 places_df = places_df.where((pd.notnull(places_df)), None)
-ratings_df = pd.read_excel(file_path.format(city)).ix[:, ['id', 'gg_reviews', 'gg_ratings', 'ta_reviews', 'ta_ratings']]
+ratings_df = pd.read_excel(file_path.format(city[1])).ix[:, ['id', 'gg_reviews', 'gg_ratings', 'ta_reviews', 'ta_ratings']]
 ratings_df = ratings_df.where((pd.notnull(ratings_df)), 0)
-types_df = pd.read_excel(file_path.format(city)).ix[:, ['id', 'types']]
+types_df = pd.read_excel(file_path.format(city[1])).ix[:, ['id', 'types']]
 users_df = pd.read_excel(file_path.format('users'))
 
 
 for n in xrange(size):
 
-    travel_db.save_place(places_df.ix[n, 'id'], city, places_df.ix[n, 'name'], places_df.ix[n, 'address'],
+    travel_db.save_place(places_df.ix[n, 'id'], city[1], places_df.ix[n, 'name'], places_df.ix[n, 'address'],
                          places_df.ix[n, 'lng'], places_df.ix[n, 'lat'])
 
     travel_db.save_ratings(ratings_df.ix[n, 'id'], ratings_df.ix[n, 'gg_reviews'], ratings_df.ix[n, 'gg_ratings'],
