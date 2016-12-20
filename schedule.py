@@ -21,7 +21,7 @@ class similarDB(object):
         self.travel_db = travelDB()
         self.user_id = user_id
         self.city = city
-        self.days = days
+        self.days = int(days)
 
 
         self.geoinfo_df = self.travel_db.get_geoinfo_db_fetch(city)
