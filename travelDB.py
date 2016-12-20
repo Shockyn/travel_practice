@@ -181,36 +181,36 @@ class travelDB(object):
 
         return df
 
-'''
-city = ['moscow', 'florence']
-file_path = 'data/{}.xlsx'
+    def city_file_to_db(self, file_name):
+        file_path = 'data/{}.xlsx'.format(file_name)
 
-travel_db = travelDB()
+        file_size = len(pd.read_excel(file_path))
 
-size = len(pd.read_excel(file_path.format(city[1])))
-user_size = len(pd.read_excel(file_path.format('users')))
+        places_df = pd.read_excel(file_name).ix[:, ['name', 'id', 'address', 'lng', 'lat']]
+        places_df = places_df.where((pd.notnull(places_df)), None)
+        ratings_df = pd.read_excel((file_name)).ix[:,
+                     ['id', 'gg_reviews', 'gg_ratings', 'ta_reviews', 'ta_ratings']]
+        ratings_df = ratings_df.where((pd.notnull(ratings_df)), 0)
+        types_df = pd.read_excel((file_name)).ix[:, ['id', 'types']]
+        users_df = pd.read_excel(file_path.format('users'))
 
-places_df = pd.read_excel(file_path.format(city[1])).ix[:, ['name', 'id', 'address', 'lng', 'lat']]
-places_df = places_df.where((pd.notnull(places_df)), None)
-ratings_df = pd.read_excel(file_path.format(city[1])).ix[:, ['id', 'gg_reviews', 'gg_ratings', 'ta_reviews', 'ta_ratings']]
-ratings_df = ratings_df.where((pd.notnull(ratings_df)), 0)
-types_df = pd.read_excel(file_path.format(city[1])).ix[:, ['id', 'types']]
-users_df = pd.read_excel(file_path.format('users'))
+        for n in xrange(file_size):
 
+            self.save_place(places_df.ix[n, 'id'], file_name, places_df.ix[n, 'name'], places_df.ix[n, 'address'],
+                                 places_df.ix[n, 'lng'], places_df.ix[n, 'lat'])
 
-for n in xrange(size):
+            self.save_ratings(ratings_df.ix[n, 'id'], ratings_df.ix[n, 'gg_reviews'],
+                                   ratings_df.ix[n, 'gg_ratings'],
+                                   ratings_df.ix[n, 'ta_reviews'], ratings_df.ix[n, 'ta_ratings'])
 
-    travel_db.save_place(places_df.ix[n, 'id'], city[1], places_df.ix[n, 'name'], places_df.ix[n, 'address'],
-                         places_df.ix[n, 'lng'], places_df.ix[n, 'lat'])
+            for type in types_df.ix[n, 'types'].replace(' ', '').split(','):
+                self.save_types(types_df.ix[n, 'id'], type)
 
-    travel_db.save_ratings(ratings_df.ix[n, 'id'], ratings_df.ix[n, 'gg_reviews'], ratings_df.ix[n, 'gg_ratings'],
-                           ratings_df.ix[n, 'ta_reviews'], ratings_df.ix[n, 'ta_ratings'])
+        def user_file_to_db(self, file_name):
+            file_path = 'data/{}.xlsx'.format(file_name)
 
-    for type in types_df.ix[n, 'types'].replace(' ', '').split(','):
-        travel_db.save_types(types_df.ix[n, 'id'], type)
+            user_size = len(pd.read_excel(file_path))
 
-
-for n in xrange(user_size):
-    for place_id in users_df.ix[n, 'place_id'].replace(' ', '').split(','):
-        travel_db.save_users(users_df.ix[n, 'user_id'], place_id)
-'''
+            for n in xrange(user_size):
+                for place_id in users_df.ix[n, 'place_id'].replace(' ', '').split(','):
+                    self.save_users(users_df.ix[n, 'user_id'], place_id)

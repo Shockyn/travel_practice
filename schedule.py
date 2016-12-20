@@ -15,6 +15,9 @@ from travelDB import travelDB
 
 class similarDB(object):
     def __init__(self, travelDB, user_id, city, days):
+        start_time = time.time()
+        print("Starting initializing...")
+
         self.travel_db = travelDB()
         self.user_id = user_id
         self.city = city
@@ -37,6 +40,8 @@ class similarDB(object):
         self.node_df = pd.DataFrame(columns=['place_id', 'node', 'distance'])
         self.node_geo_df = 0
         self.node_list = list()
+
+        print('Initializing has been done! %s sec' % (time.time() - start_time))
 
     def get_user_pref(self):
         start_time = time.time()
@@ -155,7 +160,6 @@ class similarDB(object):
 
     def making_schedule(self):
         start_time = time.time()
-        print('Making Schedule...')
 
         self.making_node()
         total_schedule = dict()
@@ -216,11 +220,12 @@ class similarDB(object):
             lng.append(self.geoinfo_df.ix[place, 'lng'])
 
         return tuple((min(lng) + (max(lng) - min(lng)) / 2, min(lat) + (max(lat) - min(lat)) / 2))
-
+'''
 city = 'moscow'
-user_id = 3
+user_id = 1
 days = 3
 travel_db = travelDB()
 
 similar_db = similarDB(travelDB, user_id, city, days)
 pprint.pprint(similar_db.making_schedule(), width=1)
+'''
